@@ -7,67 +7,72 @@ module BillingWorkers
     sidekiq_options queue: :billing
 
     def perform(num_inst)
+      @experiment_logger = []
+
       @bunny = Bunny.new
-      @flag = true
-      loop do
-        if @flag == true
-          @flag = false
-          @current_logger = Logger.new("#{File.dirname(__FILE__)}/../../log/sidekiq_#{ENV['APP_ENV']}_inst_#{num_inst}.log")
-          @current_logger.info { "NOTIFICATIONS: Started" }        
-          @bunny.start
-          @ch   = @bunny.create_channel
-          run
-          @bunny.close
-          @flag = true
-        end
-      end
+      @current_logger = Logger.new("#{File.dirname(__FILE__)}/../../log/sidekiq_#{ENV['APP_ENV']}_inst_#{num_inst}.log")
+      @current_logger.info "NOTIFICATIONS: Started"      
+      begin
+        @current_logger.info p " [*] RUBY Waiting for messages. To exit press CTRL+C"
+        @bunny.start
+        @ch   = @bunny.create_channel
+        run
+      rescue Interrupt => _
+        @bunny.close
+        @current_logger.info "NOTIFICATIONS: Stopped"
+        exit(0)
+      end 
     end
 
-    def run     
-      tdr_data = get_tdr_data_from_rabbit
-      if tdr_data.present?
-        delivery_tag = tdr_data['delivery_tag']
+    def run   
+      @current_logger.info p "Выполняем run, ждем tdr."  
+      q    = @ch.queue($config['runner']['input_queue']) 
+      q.subscribe(:block => true, :manual_ack => true) do |delivery_info, properties, body|
+        time1 = Time.now
 
-        tdr = Tdr.new(eval( tdr_data['tdr'] ))
-        if tdr.present?
-          obd = Db::OnBoardDevice.find_by_number(tdr.imei)
-          if obd.present? && obd.truck.present? && obd.truck.company.present?
-            customer = obd.truck.company   
-            current_tariff = Db::Tariff.find_by_id eval(Db::TariffSetting.last.code)           
-            sum = eval(current_tariff.code)                         
-            tdr.sum = sum
-            p tdr
-            send_tdr_data_to_rabbit(tdr, customer)  
+        tdr_data = Hash.new
+        tdr_data['delivery_tag'] = delivery_info.delivery_tag
+        tdr_data['tdr'] = body 
+        @current_logger.info p "Bunny ::: получили данные #{tdr_data}"
 
-            # отправка ack в канал
-            @ch.ack(delivery_tag)
+        if tdr_data.present?
+          @current_logger.info p "Получен хеш tdr."
+          delivery_tag = tdr_data['delivery_tag']
 
-            @current_logger.info p "Обработан tdr #{tdr} ::: sum #{sum} ::: #{tdr.full_info}"    
-          end
+          tdr = Tdr.new(eval( tdr_data['tdr'] ))
+
+          if tdr.present?
+            @current_logger.info p "Новый tdr #{tdr} ::: delivery_tag #{delivery_tag}"
+
+            obd = Db::OnBoardDevice.find_by_number(tdr.imei)
+            if obd.present? && obd.truck.present? && obd.truck.company.present?
+              customer = obd.truck.company   
+              current_tariff = Db::Tariff.find_by_id eval(Db::TariffSetting.last.code)           
+              sum = eval(current_tariff.code)                         
+              tdr.sum = sum
+              p tdr
+              send_tdr_data_to_rabbit(tdr, customer)  
+
+              # отправка ack в канал
+              @ch.ack(delivery_tag)
+
+              @current_logger.info p "Обработан tdr ::: delivery_tag #{delivery_tag} #{tdr} ::: sum #{sum} ::: #{tdr.full_info}"    
+            end
+          end        
         end
-        
+
+        time2 = Time.now
+        @experiment_logger << (time2 - time1)
+        if @experiment_logger.size > 9900
+          m = @experiment_logger
+          @current_logger.info p "Среднее время выполнения"
+          p (m.inject(0){ |sum,el| sum + el }.to_f)/ m.size
+        end
       end
     end
 
     def night_time?
       false
-    end
-
-    # информация из TDR-тарифов
-    def get_tdr_data_from_rabbit
-      q    = @ch.queue($config['runner']['input_queue'])   
-      tdr_data = nil
-      q.subscribe(:manual_ack => true) do |delivery_info, properties, body|
-        tdr_data = Hash.new
-        
-        tdr_data['delivery_tag'] = delivery_info.delivery_tag
-        tdr_data['tdr'] = body
-
-        @current_logger.info p "Bunny ::: получили данные #{tdr_data}"
-      end     
-
-      # @current_logger.info p "Bunny ::: recieve data #{tdr_data}"
-      tdr_data
     end
 
     def send_tdr_data_to_rabbit(tdr, customer)

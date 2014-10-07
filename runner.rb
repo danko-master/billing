@@ -30,10 +30,10 @@ if ENV['APP_ENV']
 
   
   require 'sidekiq' 
-  instances = $config['runner']['instances'].to_i
-  while instances > 0
+  instances = 0
+  while instances < $config['runner']['instances'].to_i
     BillingWorkers::Calc.perform_async(instances)
-    instances = instances - 1
+    instances += 1
   end
 else
   puts 'Error: not found "APP_ENV"!'
