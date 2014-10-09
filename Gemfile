@@ -10,5 +10,6 @@ gem 'bunny', '~> 1.4.1'
 gem 'sidekiq', '~> 3.2.5'
 
 gem 'capistrano', '~> 3.2.1'
+gem 'capistrano-bundler', '~> 1.1.3'
 
 gem 'pry', '~> 0.10.1', group: :development
