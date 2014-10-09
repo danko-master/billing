@@ -29,6 +29,9 @@ if ENV['APP_ENV']
         :host     => $config['database']['host'])
 
   
+  require 'redis'
+  $redis = Redis.new
+  
   require 'sidekiq' 
   instances = 0
   while instances < $config['runner']['instances'].to_i

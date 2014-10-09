@@ -9,7 +9,10 @@ module BillingWorkers
     def perform(num_inst)
       @experiment_logger = []
 
-      @bunny = Bunny.new
+      @bunny = Bunny.new(host: $config['rabbit']['host'], 
+        port: $config['rabbit']['port'], 
+        user: $config['rabbit']['user'], 
+        password: $config['rabbit']['password'])
       @current_logger = Logger.new("#{File.dirname(__FILE__)}/../../log/sidekiq_#{ENV['APP_ENV']}_inst_#{num_inst}.log")
       @current_logger.info "NOTIFICATIONS: Started"      
       begin
@@ -44,14 +47,31 @@ module BillingWorkers
           if tdr.present?
             @current_logger.info p "Новый tdr #{tdr} ::: delivery_tag #{delivery_tag}"
 
-            obd = Db::OnBoardDevice.find_by_number(tdr.imei)
-            if obd.present? && obd.truck.present? && obd.truck.company.present?
-              customer = obd.truck.company   
-              current_tariff = Db::Tariff.find_by_id eval(Db::TariffSetting.last.code)           
-              sum = eval(current_tariff.code)                         
+            # используем данные редиса, которые публикуются scheduled_jobs
+            obd = $redis.get("svp:on_board_device:#{tdr.imei}")
+            # obd = Db::OnBoardDevice.find_by_number(tdr.imei)
+
+            obd_truck = $redis.get("svp:truck:#{eval(obd)['truck_id']}") if obd.present?
+            obd_truck_company = $redis.get("svp:company:#{eval(obd_truck)['company_id']}") if obd_truck.present?
+            p "obd_truck_company #{obd_truck_company}"
+
+            if obd.present? && obd_truck.present? && obd_truck_company.present?
+              customer = Customer.new(eval(obd_truck_company))   
+              p "customer #{customer}"
+              p "customer #{customer.id}"
+              p "customer #{customer.discount}"
+              # current_tariff = Db::Tariff.find_by_id eval(Db::TariffSetting.last.code)
+              
+              tariff_setting = $redis.get("svp:tariff_setting")
+              tariff_id = eval(tariff_setting) if tariff_setting.present?
+              current_tariff = eval($redis.get("svp:tariff:#{tariff_id}")) if tariff_id.present?
+              if current_tariff.present?  
+                sum = eval(current_tariff['code']) 
+              end                       
               tdr.sum = sum
               p tdr
               send_tdr_data_to_rabbit(tdr, customer)  
+
 
               # отправка ack в канал
               @ch.ack(delivery_tag)
@@ -63,7 +83,7 @@ module BillingWorkers
 
         time2 = Time.now
         @experiment_logger << (time2 - time1)
-        if @experiment_logger.size > 9900
+        if @experiment_logger.size > 990
           m = @experiment_logger
           @current_logger.info p "Среднее время выполнения"
           p (m.inject(0){ |sum,el| sum + el }.to_f)/ m.size
@@ -95,6 +115,21 @@ module BillingWorkers
       )
 
       @ch.default_exchange.publish(tdr_bson.to_s, :routing_key => q.name)
+    end
+  end
+
+  class Customer
+    def initialize(hash)
+      @id = hash['id']
+      @discount = hash['discount']
+    end
+
+    def id
+      @id 
+    end
+
+    def discount
+      @discount
     end
   end
 

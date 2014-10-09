@@ -8,6 +8,12 @@ default_database: &default_database
   adapter: postgresql
   encoding: utf8
 
+default_rabbit: &default_rabbit
+  port: 5672
+
+
+
+
 development:
   <<: *default
 
@@ -20,7 +26,11 @@ development:
     username: test_usr_dev1
     password: test_usr_dev1
 
-  
+  rabbit:
+    <<: *default_rabbit
+    host: 'localhost'  
+    user: 'guest'
+    password: 'guest'
 
 test:
   <<: *default
@@ -28,9 +38,18 @@ test:
   database:
     <<: *default_database
 
+  rabbit:
+    <<: *default_rabbit
+
 
 production:
   <<: *default
 
   database:
     <<: *default_database
+
+  rabbit:
+    <<: *default_rabbit
+    host: '172.17.10.26'  
+    user: 'svp_app'
+    password: 'svp_app'
