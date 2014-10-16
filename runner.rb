@@ -3,7 +3,7 @@
 
 ## Достаточно запуска только sidekiq
 # Run: export APP_ENV=development && bundle exec sidekiq -C ./config/sidekiq.yml -r ./runner.rb
-
+# Run: export APP_ENV=production && bundle exec sidekiq -C ./config/sidekiq.yml -r ./runner.rb
 
 
 if ENV['APP_ENV']

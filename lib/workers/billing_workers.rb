@@ -29,7 +29,7 @@ module BillingWorkers
 
     def run   
       @current_logger.info p "Выполняем run, ждем tdr."  
-      q    = @ch.queue($config['runner']['input_queue']) 
+      q    = @ch.queue($config['runner']['input_queue'], :durable => true) 
       q.subscribe(:block => true, :manual_ack => true) do |delivery_info, properties, body|
         time1 = Time.now
 
