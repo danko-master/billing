@@ -35,14 +35,15 @@ module BillingWorkers
 
         tdr_data = Hash.new
         tdr_data['delivery_tag'] = delivery_info.delivery_tag
-        tdr_data['tdr'] = body 
+        tdr_data['tdr'] = BSON::Document.from_bson(StringIO.new(body))
         @current_logger.info p "Bunny ::: получили данные #{tdr_data}"
 
         if tdr_data.present?
           @current_logger.info p "Получен хеш tdr."
           delivery_tag = tdr_data['delivery_tag']
 
-          tdr = Tdr.new(eval( tdr_data['tdr'] ))
+          # tdr = Tdr.new(eval( tdr_data['tdr'] ))
+          tdr = Tdr.new(tdr_data['tdr'])
 
           if tdr.present?
             @current_logger.info p "Новый tdr #{tdr} ::: delivery_tag #{delivery_tag}"
@@ -134,10 +135,11 @@ module BillingWorkers
   end
 
   class Tdr
-    def initialize(hash)
-      @path = hash['path']
-      @imei = hash['imei'].to_s
-      @full_info = hash
+    def initialize(bson_doc)
+      @path = bson_doc['path']
+      # здесь косяк с передачей imei
+      @imei = bson_doc['imei'][1].data
+      @full_info = bson_doc
       @sum
     end
 
