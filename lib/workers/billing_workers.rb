@@ -1,5 +1,6 @@
 require 'bson'
 require 'bunny'
+require 'curb'
 
 module BillingWorkers
   class Calc
@@ -71,11 +72,49 @@ module BillingWorkers
               end                       
               tdr.sum = sum
               p tdr
-              send_tdr_data_to_rabbit(tdr, customer)  
+              # send_tdr_data_to_rabbit(tdr, customer)  
 
 
               # отправка ack в канал
               @ch.ack(delivery_tag)
+
+
+
+######################################3
+              # временно пишем в 172.17.10.39
+              @current_logger.info p "Пишем tdr в 172.17.10.39"
+              Curl::Easy.http_post("http://172.17.10.39:8086/db/svp_tdr/series?u=svp&p=qir29sir", 
+                {
+                  name:"svp_tdr",
+                  columns: [
+                            "imei",
+                            "road_id",
+                            "lat0",
+                            "lon0", 
+                            "time0",
+                            "lat1",
+                            "lon1",
+                            "time1",
+                            "path",
+                            "sum"
+                           ],
+                  points: [
+                    tdr.imei,
+                    tdr.full_info['road_id'],
+                    tdr.full_info['lat0'],
+                    tdr.full_info['lon0'],  
+                    tdr.full_info['time0'], 
+                    tdr.full_info['lat1'],
+                    tdr.full_info['time1'], 
+                    tdr.full_info['path'],
+                    tdr.sum
+                  ]
+                }) do |curl|
+                curl.headers['Accept'] = 'application/json'
+                curl.headers['Content-Type'] = 'application/json'
+              end
+######################################3
+
 
               @current_logger.info p "Обработан tdr ::: delivery_tag #{delivery_tag} #{tdr} ::: sum #{sum} ::: #{tdr.full_info}"    
             end
