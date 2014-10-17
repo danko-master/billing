@@ -72,7 +72,7 @@ module BillingWorkers
               end                       
               tdr.sum = sum
               p tdr
-              # send_tdr_data_to_rabbit(tdr, customer)  
+              send_tdr_data_to_rabbit(tdr, customer)  
 
 
               # отправка ack в канал
