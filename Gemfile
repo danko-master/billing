@@ -14,4 +14,4 @@ gem 'capistrano-bundler', '~> 1.1.3'
 
 gem 'pry', '~> 0.10.1', group: :development
 
-gem 'curb', '~> 0.8.6'
+# gem 'curb', '~> 0.8.6'
