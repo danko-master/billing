@@ -10,7 +10,7 @@ if ENV['APP_ENV']
   # require 'pry'
   
   require_relative 'config/config'
-  $config = Configuration.load_config
+  p $config = Configuration.load_config
 
   require 'logger'
   current_logger = Logger.new("#{File.dirname(__FILE__)}/log/billing_#{ENV['APP_ENV']}.log")
@@ -28,12 +28,11 @@ if ENV['APP_ENV']
         :password => $config['database']['password'],
         :host     => $config['database']['host'])
 
-  
   require 'redis'
   $redis = Redis.new(host: $config['redis_cache']['host'], port: $config['redis_cache']['port'])
   
   require 'sidekiq' 
-  instances = 0
+  instances = 0  
   while instances < $config['runner']['instances'].to_i
     BillingWorkers::Calc.perform_async(instances)
     instances += 1

@@ -1,7 +1,8 @@
 default: &default
   runner:
     instances: 1
-    input_queue: "svp"
+    # input_queue: "svp"
+    input_queue: "svp_test1"
     output_queue: "svp_billing"
     output_queue2: "svp_tdr"
 
@@ -54,8 +55,12 @@ production:
     <<: *default_database
     host: 172.17.10.24
     port: 5432
+    # host: localhost
+    # port: 15432
+    # encoding: unicode
+
     database: svpdb
-    username: svpdb
+    username: svp
     password: qir29sir
 
   rabbit:

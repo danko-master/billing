@@ -21,7 +21,9 @@ module BillingWorkers
         @current_logger.info p " [*] RUBY Waiting for messages. To exit press CTRL+C"
         @bunny.start
         @ch   = @bunny.create_channel
-        run
+
+        time_count = Time.now.to_f
+        run(num_inst, time_count)
       rescue Interrupt => _
         @bunny.close
         @current_logger.info "NOTIFICATIONS: Stopped"
@@ -29,61 +31,86 @@ module BillingWorkers
       end 
     end
 
-    def run   
-      # @current_logger_status = Logger.new("#{File.dirname(__FILE__)}/../../log/status_#{ENV['APP_ENV']}_inst_#{num_inst}.log")
+    def run(num_inst, time_count)     
+      # количество прочитанных сообщений
+      message_count_recieve = 0
+      sum_count = 0  
+      status_log_file = "#{File.dirname(__FILE__)}/../../log/status_#{ENV['APP_ENV']}_inst_#{num_inst}.log"        
 
       @current_logger.info p "Выполняем run, ждем tdr."  
       q    = @ch.queue($config['runner']['input_queue'], :durable => true) 
       q.subscribe(:block => true, :manual_ack => true) do |delivery_info, properties, body|
-        begin          
+        
+        # begin          
           time1 = Time.now
 
           tdr_data = Hash.new
           tdr_data['delivery_tag'] = delivery_info.delivery_tag
-          tdr_data['tdr'] = BSON::Document.from_bson(StringIO.new(body))
+
+          # tdr_data['tdr'] = BSON::Document.from_bson(StringIO.new(body))
+          tdr_data['tdr'] = body
+
           @current_logger.info p "Bunny ::: получили данные #{tdr_data}"
 
           if tdr_data.present?
             @current_logger.info p "Получен хеш tdr."
             delivery_tag = tdr_data['delivery_tag']
-
-            # tdr = Tdr.new(eval( tdr_data['tdr'] ))
-            tdr = Tdr.new(tdr_data['tdr'])
+            
+            # tdr = Tdr.new(tdr_data['tdr'])
+            tdr = Tdr.new(eval( tdr_data['tdr'] ))
+            
 
             if tdr.present?
               @current_logger.info p "Новый tdr #{tdr} - imei - #{tdr.imei} ::: delivery_tag #{delivery_tag}"
 
               # используем данные редиса, которые публикуются scheduled_jobs
-              obd = $redis.get("svp:on_board_device:#{tdr.imei}")
-              # obd = Db::OnBoardDevice.find_by_number(tdr.imei)
+              # obd = $redis.get("svp:on_board_device:#{tdr.imei}")
+              obd = Db::OnBoardDevice.find_by_number(tdr.imei)
 
-              obd_truck = $redis.get("svp:truck:#{eval(obd)['truck_id']}") if obd.present?
-              obd_truck_company = $redis.get("svp:company:#{eval(obd_truck)['company_id']}") if obd_truck.present?
-              p "obd_truck_company #{obd_truck_company}"
+              # obd_truck = $redis.get("svp:truck:#{eval(obd)['truck_id']}") if obd.present?
+              obd_truck = Db::Truck.find_by_id(obd.truck_id) if obd.present?
+
+              # obd_truck_company = $redis.get("svp:company:#{eval(obd_truck)['company_id']}") if obd_truck.present?
+              obd_truck_company = Db::UserCard.find_by_id obd_truck.user_card_id
+              p "User Card #{obd_truck_company}"
 
               if obd.present? && obd_truck.present? && obd_truck_company.present?
-                customer = Customer.new(eval(obd_truck_company))   
+                customer = Customer.new(obd_truck_company)   
                 @current_logger.info p "customer #{customer}"
                 @current_logger.info p "customer id #{customer.id}"
                 @current_logger.info p "customer discount #{customer.discount}"
-                # current_tariff = Db::Tariff.find_by_id eval(Db::TariffSetting.last.code)
                 
-                tariff_setting = $redis.get("svp:tariff_setting")
-                tariff_id = eval(tariff_setting) if tariff_setting.present?
-                current_tariff = eval($redis.get("svp:tariff:#{tariff_id}")) if tariff_id.present?
+                # tariff_setting = $redis.get("svp:tariff_setting")
+                tariff_setting = Db::TariffSetting.last
+
+                # tariff_id = eval(tariff_setting) if tariff_setting.present?
+                tariff_id = tariff_setting.id if tariff_setting.present?
+
+                # current_tariff = eval($redis.get("svp:tariff:#{tariff_id}")) if tariff_id.present?
+                current_tariff = Db::Tariff.find_by_id(tariff_id) if tariff_id.present?
                 if current_tariff.present?  
-                  sum = eval(current_tariff['code']) 
+                  # sum = eval(current_tariff['code']) 
+                  sum = current_tariff.code
                 end                       
                 tdr.sum = sum
                 @current_logger.info p "tdr #{tdr}"
-                send_tdr_data_to_rabbit(tdr, customer)  
+                # send_tdr_data_to_rabbit(tdr, customer)  
 
 
                 # отправка ack в канал
                 @current_logger.info p "Отправка ack в RabbitMQ ::: delivery_tag: #{delivery_tag}"
                 @ch.ack(delivery_tag)
 
+                # p (Time.now.to_f - time_count)
+                # if (((Time.now.to_f - time_count)*1000)%1000 == 0)
+                #   message_count_recieve += 1
+                #   sum_count += sum
+                #   File.open(status_log_file, 'w') do |f|
+                #     f.write "#{Time.now} TDR принято #{message_count_recieve}\n Средств начислено #{sum} (в #{(Time.now.to_i - time_count)} секунд) / #{sum_count} (всего)"
+                #   end
+                # end
                 @current_logger.info p "Обработан tdr ::: delivery_tag #{delivery_tag} #{tdr} ::: sum #{sum} ::: #{tdr.full_info}"    
+                
               end
             end        
           end
@@ -95,9 +122,9 @@ module BillingWorkers
           #   @current_logger.info p "Среднее время выполнения"
           #   p (m.inject(0){ |sum,el| sum + el }.to_f)/ m.size
           # end
-        rescue Exception => e
-          puts "ERROR! #{e}"
-        end
+        # rescue Exception => e
+        #   puts "ERROR! #{e}"
+        # end
       end
     end
 
@@ -144,9 +171,9 @@ module BillingWorkers
   end
 
   class Customer
-    def initialize(hash)
-      @id = hash['id']
-      @discount = hash['discount']
+    def initialize(data)
+      @id = data.id
+      @discount = data.discount
     end
 
     def id
@@ -162,7 +189,7 @@ module BillingWorkers
     def initialize(bson_doc)
       @path = bson_doc['path']
       # здесь косяк с передачей imei
-      @imei = bson_doc['imei'][1].data
+      @imei = bson_doc['imei'] # bson_doc['imei'][1].data
       @full_info = bson_doc
       @sum
     end
