@@ -94,7 +94,7 @@ module BillingWorkers
                 current_tariff = Db::Tariff.find_by_id(tariff_id) if tariff_id.present?
                 if current_tariff.present?  
                   # sum = eval(current_tariff['code']) 
-                  sum = current_tariff.code
+                  sum = eval(current_tariff.code)
                 end                       
                 tdr.sum = sum
                 @current_logger.info p "tdr #{tdr}"
