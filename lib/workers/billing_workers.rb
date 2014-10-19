@@ -106,8 +106,10 @@ module BillingWorkers
                 p obd_truck_company.spis_sum ||= 0
                 spis_sum_upd = obd_truck_company.spis_sum + sum
                 p "spis_sum_upd #{spis_sum_upd}"
-                p obd_truck_company.spis_sum = spis_sum_upd
-                p obd_truck_company.save
+                if spis_sum_upd > 0
+                  p obd_truck_company.spis_sum = spis_sum_upd
+                  p obd_truck_company.save
+                end
 
 
                 ##### END TMP CALC
