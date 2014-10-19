@@ -20,4 +20,7 @@ module Db
   class OnBoardDevice < ActiveRecord::Base
     belongs_to :truck
   end
+
+  class Payment < ActiveRecord::Base
+  end
 end

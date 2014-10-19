@@ -100,13 +100,23 @@ module BillingWorkers
                 @current_logger.info p "tdr #{tdr}"
                 send_tdr_data_to_rabbit(tdr, customer)  
 
+                ##### TMP CALC
+
+                p Db::Payment.create(user_card_id: obd_truck_company.id, truck_id: obd_truck.id, sum: sum, kilometers: tdr.full_info['path'])
+                spis_sum_upd = obd_truck_company.spis_sum + sum
+                obd_truck_company.spis_sum = spis_sum_upd
+                obd_truck_company.save
+
+
+                ##### END TMP CALC
+
 
                 # отправка ack в канал
                 @current_logger.info p "Отправка ack в RabbitMQ ::: delivery_tag: #{delivery_tag}"
                 @ch.ack(delivery_tag)
 
                 p (Time.now.to_f - time_count)
-                if (((Time.now.to_f - time_count)*1000)%1000 == 0)
+                if (Time.now.to_f - time_count) > 1
                   message_count_recieve += 1
                   sum_count += sum
                   File.open(status_log_file, 'w') do |f|

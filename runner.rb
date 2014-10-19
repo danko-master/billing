@@ -35,6 +35,7 @@ if ENV['APP_ENV']
   instances = 0  
   while instances < $config['runner']['instances'].to_i
     BillingWorkers::Calc.perform_async(instances)
+    # TestWorkers::Calc.perform_async
     instances += 1
   end
 else
