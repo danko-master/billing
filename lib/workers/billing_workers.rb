@@ -65,7 +65,7 @@ module BillingWorkers
 
               # используем данные редиса, которые публикуются scheduled_jobs
               # obd = $redis.get("svp:on_board_device:#{tdr.imei}")
-              obd = Db::OnBoardDevice.find_by_number(tdr.imei)
+              obd = Db::OnBoardDevice.find_by_number("#{tdr.imei}")
 
               # obd_truck = $redis.get("svp:truck:#{eval(obd)['truck_id']}") if obd.present?
               obd_truck = Db::Truck.find_by_id(obd.truck_id) if obd.present?
