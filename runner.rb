@@ -30,7 +30,7 @@ if ENV['APP_ENV']
 
   
   require 'redis'
-  $redis = Redis.new
+  $redis = Redis.new(host: $config['redis_cache']['host'], port: $config['redis_cache']['port'])
   
   require 'sidekiq' 
   instances = 0

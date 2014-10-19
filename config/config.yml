@@ -3,6 +3,7 @@ default: &default
     instances: 1
     input_queue: "svp"
     output_queue: "svp_billing"
+    output_queue2: "svp_tdr"
 
 default_database: &default_database
   adapter: postgresql
@@ -32,6 +33,10 @@ development:
     user: 'guest'
     password: 'guest'
 
+  redis_cache:
+    host: localhost
+    port: 6379
+
 test:
   <<: *default
 
@@ -58,3 +63,7 @@ production:
     host: '172.17.10.26'  
     user: 'svp_app'
     password: 'svp_app'
+
+  redis_cache:
+    host: 172.17.10.27
+    port: 6379
