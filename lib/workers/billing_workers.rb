@@ -98,21 +98,21 @@ module BillingWorkers
                 end                       
                 tdr.sum = sum
                 @current_logger.info p "tdr #{tdr}"
-                # send_tdr_data_to_rabbit(tdr, customer)  
+                send_tdr_data_to_rabbit(tdr, customer)  
 
 
                 # отправка ack в канал
                 @current_logger.info p "Отправка ack в RabbitMQ ::: delivery_tag: #{delivery_tag}"
                 @ch.ack(delivery_tag)
 
-                # p (Time.now.to_f - time_count)
-                # if (((Time.now.to_f - time_count)*1000)%1000 == 0)
-                #   message_count_recieve += 1
-                #   sum_count += sum
-                #   File.open(status_log_file, 'w') do |f|
-                #     f.write "#{Time.now} TDR принято #{message_count_recieve}\n Средств начислено #{sum} (в #{(Time.now.to_i - time_count)} секунд) / #{sum_count} (всего)"
-                #   end
-                # end
+                p (Time.now.to_f - time_count)
+                if (((Time.now.to_f - time_count)*1000)%1000 == 0)
+                  message_count_recieve += 1
+                  sum_count += sum
+                  File.open(status_log_file, 'w') do |f|
+                    f.write "#{Time.now} TDR принято #{message_count_recieve}\n Средств начислено #{sum} / #{sum_count} (всего)"
+                  end
+                end
                 @current_logger.info p "Обработан tdr ::: delivery_tag #{delivery_tag} #{tdr} ::: sum #{sum} ::: #{tdr.full_info}"    
                 
               end
@@ -191,12 +191,14 @@ module BillingWorkers
 
   class Tdr
     def initialize(bson_doc)
-      bson_doc = JSON.parse(bson_doc)
-      @path = bson_doc['path']
+      p "TDR init"
+      p bson_doc = JSON.parse(bson_doc)
+      p @path = bson_doc['path']
       # здесь косяк с передачей imei
-      @imei = bson_doc['imei'] # bson_doc['imei'][1].data
-      @full_info = bson_doc
-      @sum
+      p @imei = bson_doc['imei'] # bson_doc['imei'][1].data
+      p @full_info = bson_doc
+      p @sum
+      p "TDR end init"
     end
 
     def imei
