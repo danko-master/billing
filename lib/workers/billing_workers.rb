@@ -57,7 +57,8 @@ module BillingWorkers
             delivery_tag = tdr_data['delivery_tag']
             
             # tdr = Tdr.new(tdr_data['tdr'])
-            tdr = Tdr.new(eval( tdr_data['tdr'] ))
+            # tdr = Tdr.new(eval( tdr_data['tdr'] ))
+            tdr = Tdr.new(tdr_data['tdr'])
             
 
             if tdr.present?
@@ -172,8 +173,9 @@ module BillingWorkers
 
   class Customer
     def initialize(data)
-      @id = data.id
-      @discount = data.discount
+      data = JSON.parse(data)
+      @id = data['id']
+      @discount = data['discount']
     end
 
     def id
