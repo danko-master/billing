@@ -71,7 +71,7 @@ module BillingWorkers
               obd_truck = Db::Truck.find_by_id(obd.truck_id) if obd.present?
 
               # obd_truck_company = $redis.get("svp:company:#{eval(obd_truck)['company_id']}") if obd_truck.present?
-              obd_truck_company = Db::UserCard.find_by_id obd_truck.user_card_id
+              obd_truck_company = Db::UserCard.find_by_id obd_truck.user_card_id if obd_truck.present?
               p "User Card #{obd_truck_company}"
 
               if obd.present? && obd_truck.present? && obd_truck_company.present?

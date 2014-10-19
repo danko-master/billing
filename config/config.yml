@@ -2,7 +2,7 @@ default: &default
   runner:
     instances: 1
     # input_queue: "svp"
-    input_queue: "svp_test1"
+    input_queue: "svp"
     output_queue: "svp_billing"
     output_queue2: "svp_tdr"
 
