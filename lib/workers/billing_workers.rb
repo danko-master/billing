@@ -103,6 +103,7 @@ module BillingWorkers
                 ##### TMP CALC
 
                 p Db::Payment.create(user_card_id: obd_truck_company.id, truck_id: obd_truck.id, sum: sum, kilometers: tdr.full_info['path'])
+                obd_truck_company.spis_sum ||= 0
                 spis_sum_upd = obd_truck_company.spis_sum + sum
                 obd_truck_company.spis_sum = spis_sum_upd
                 obd_truck_company.save
