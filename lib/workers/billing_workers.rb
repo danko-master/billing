@@ -32,7 +32,7 @@ module BillingWorkers
     end
 
     def run(num_inst, time_count)     
-      # количество прочитанных сообщений
+      # количество прочитанных сообщений 
       message_count_recieve = 0
       sum_count = 0  
       status_log_file = "#{File.dirname(__FILE__)}/../../log/status_#{ENV['APP_ENV']}_inst_#{num_inst}.log"        
