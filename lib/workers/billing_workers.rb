@@ -66,6 +66,7 @@ module BillingWorkers
 
               # используем данные редиса, которые публикуются scheduled_jobs
               # obd = $redis.get("svp:on_board_device:#{tdr.imei}")
+              p "tdr.imei #{tdr.imei}"
               p obd = Db::OnBoardDevice.find_by_number("#{tdr.imei}")
               p "obd #{obd}"
 
@@ -174,10 +175,9 @@ module BillingWorkers
   end
 
   class Customer
-    def initialize(data)
-      data = JSON.parse(data)
-      @id = data['id']
-      @discount = data['discount']
+    def initialize(data)      
+      @id = data.id
+      @discount = data.discount
     end
 
     def id
@@ -191,6 +191,7 @@ module BillingWorkers
 
   class Tdr
     def initialize(bson_doc)
+      bson_doc = JSON.parse(bson_doc)
       @path = bson_doc['path']
       # здесь косяк с передачей imei
       @imei = bson_doc['imei'] # bson_doc['imei'][1].data
