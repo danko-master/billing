@@ -101,14 +101,15 @@ module BillingWorkers
                 send_tdr_data_to_rabbit(tdr, customer)  
 
                 ##### TMP CALC
-
-                p Db::Payment.create(user_card_id: obd_truck_company.id, truck_id: obd_truck.id, sum: sum, kilometers: tdr.full_info['path'])
-                p obd_truck_company.spis_sum ||= 0
-                spis_sum_upd = obd_truck_company.spis_sum + sum
-                p "spis_sum_upd #{spis_sum_upd}"
-                if spis_sum_upd > 0
-                  p obd_truck_company.spis_sum = spis_sum_upd
-                  p obd_truck_company.save
+                if sum > 0
+                  p Db::Payment.create(user_card_id: obd_truck_company.id, truck_id: obd_truck.id, sum: sum, kilometers: tdr.full_info['path'])
+                  p obd_truck_company.spis_sum ||= 0
+                  spis_sum_upd = obd_truck_company.spis_sum + sum
+                  p "spis_sum_upd #{spis_sum_upd}"
+                  if spis_sum_upd > 0
+                    p obd_truck_company.spis_sum = spis_sum_upd
+                    p obd_truck_company.save
+                  end
                 end
 
 
