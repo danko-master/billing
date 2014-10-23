@@ -41,7 +41,7 @@ module BillingWorkers
       q    = @ch.queue($config['runner']['input_queue'], :durable => true) 
       q.subscribe(:block => true, :manual_ack => true) do |delivery_info, properties, body|
         
-        # begin          
+        begin          
           tdr_data = Hash.new
           tdr_data['delivery_tag'] = delivery_info.delivery_tag
           tdr_data['tdr'] = body
@@ -84,9 +84,9 @@ module BillingWorkers
             @ch.ack(delivery_info.delivery_tag)     
           end
 
-        # rescue Exception => e
-        #   puts "ERROR! #{e}"
-        # end
+        rescue Exception => e
+          puts "ERROR! #{e}"
+        end
 
 
       end
