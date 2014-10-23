@@ -71,12 +71,16 @@ module BillingWorkers
               @current_logger.info p "Отправка ack в RabbitMQ ::: delivery_tag: #{delivery_tag}"
               @ch.ack(delivery_tag)
               @current_logger.info p "Обработан tdr ::: delivery_tag #{delivery_tag} #{tdr} ::: sum #{sum} ::: #{tdr.full_info}"    
-
+            else
+              # Заглушка 
+              # пока отправляем ack в любом случае
+              @current_logger.info p "Принудительная Отправка (тип 1) ack в RabbitMQ ::: delivery_tag: #{delivery_info.delivery_tag}"
+              @ch.ack(delivery_info.delivery_tag) 
             end   
           else
             # Заглушка 
             # пока отправляем ack в любом случае
-            @current_logger.info p "Принудительная Отправка ack в RabbitMQ ::: delivery_tag: #{delivery_info.delivery_tag}"
+            @current_logger.info p "Принудительная Отправка (тип 2) ack в RabbitMQ ::: delivery_tag: #{delivery_info.delivery_tag}"
             @ch.ack(delivery_info.delivery_tag)     
           end
 
