@@ -114,6 +114,11 @@ module BillingWorkers
       }
       tdr_doc = h.to_json
       @ch.default_exchange.publish(tdr_doc, :routing_key => q.name)
+
+
+      @current_logger.info p "Отправка 2 tdr в RabbitMQ #{tdr} ::: sum: #{tdr.sum}"
+      q2    = @ch.queue($config['runner']['output_queue2'], :durable => true)
+      @ch.default_exchange.publish(tdr_doc, :routing_key => q2.name)
     end
   end
 
