@@ -62,7 +62,7 @@ module BillingWorkers
               p "tdr.imei #{tdr.imei}"
               
               # заглушка вычислений, пока просто умножаем километры на 100 рублей 
-              sum = tdr.path*100              
+              sum = tdr.path*3.5             
               tdr.sum = sum
               @current_logger.info p "tdr #{tdr}"
               send_tdr_data_to_rabbit(tdr)
